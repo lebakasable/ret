@@ -170,11 +170,10 @@ impl Lexer {
     }
 
     pub fn current_line(&self) -> Vec<char> {
-        let mut eol = self.bol;
-        while eol < self.chars.len() && self.chars[eol] != '\n' {
-            eol += 1;
-        }
-        return self.chars[self.bol..eol].to_vec();
+        self.chars[self.bol..]
+            .iter()
+            .map_while(|&x| if x == '\n' { None } else { Some(x) })
+            .collect()
     }
 
     pub fn loc(&self) -> Loc {
