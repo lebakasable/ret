@@ -1,0 +1,9 @@
+load "std/std.ret"
+
+two_plus_two :: 2 + 2 {
+    2 | all
+    sum | all
+    sum | all
+    sum_id | all
+    4 |! all
+}
