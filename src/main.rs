@@ -3,8 +3,9 @@ use std::fs;
 use std::io::Write;
 use std::io::{stdin, stdout};
 
-mod command;
+#[macro_use]
 mod engine;
+mod command;
 
 use command::*;
 use engine::diagnostics::*;

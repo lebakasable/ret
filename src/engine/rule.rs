@@ -20,7 +20,7 @@ struct Resolution {
 
 #[derive(Debug, Clone)]
 pub enum Rule {
-    User { loc: Loc, head: Expr, body: Expr },
+    User { head: Expr, body: Expr },
     Replace,
 }
 
@@ -122,7 +122,7 @@ impl Rule {
             diag: &mut impl Diagnoster,
         ) -> Option<bool> {
             match rule {
-                Rule::User { loc: _, head, body } => {
+                Rule::User { head, body } => {
                     if let Some(bindings) = head.pattern_match(expr) {
                         let resolution = strategy.matched(*match_count);
                         *match_count += 1;
@@ -163,7 +163,6 @@ impl Rule {
                     {
                         *match_count += 1;
                         let meta_rule = Rule::User {
-                            loc: loc_here!(),
                             head: bindings
                                 .get("Head")
                                 .expect("Variable `Head` is present in the meta pattern")
