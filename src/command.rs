@@ -37,8 +37,8 @@ pub enum Command {
     UndoRule(Loc),
     Quit,
     DeleteRule(Loc, Token),
-    Load(Loc, String),
-    Save(Loc, String),
+    Load(Token),
+    Save(Token),
     List,
     Show {
         name: Token,
@@ -58,14 +58,14 @@ impl Command {
                 let token = lexer.expect_token(TokenKind::Str).map_err(|(expected_kind, actual_token)| {
                     diag.report(&actual_token.loc, Severity::Error, &format!("`load` command expects {expected_kind} as the file path, but got {actual_token} instead", actual_token = actual_token.report()));
                 }).ok()?;
-                Some(Self::Load(token.loc, token.text))
+                Some(Self::Load(token))
             }
             TokenKind::Save => {
                 lexer.next_token();
                 let token = lexer.expect_token(TokenKind::Str).map_err(|(expected_kind, actual_token)| {
                     diag.report(&actual_token.loc, Severity::Error, &format!("`save` command expects {expected_kind} as the file path, but got {actual_token} instead", actual_token = actual_token.report()));
                 }).ok()?;
-                Some(Self::Save(token.loc, token.text))
+                Some(Self::Save(token))
             }
             TokenKind::CloseCurly => {
                 let token = lexer.next_token();
@@ -356,7 +356,7 @@ impl Context {
         }
     }
 
-    fn save_history(&self, file_path: &str) -> Result<(), io::Error> {
+    fn save_rules_to_file(&self, file_path: &str) -> Result<(), io::Error> {
         let mut sink = fs::File::create(file_path)?;
         for (name, RuleDefinition { rule, history }) in self.rules.iter() {
             match rule {
@@ -418,28 +418,23 @@ impl Context {
         }
     }
 
-    fn process_file(
-        &mut self,
-        loc: Loc,
-        file_path: String,
-        diag: &mut impl Diagnoster,
-    ) -> Option<()> {
-        let source = if file_path.starts_with("std/") {
+    fn process_file(&mut self, file_path: Token, diag: &mut impl Diagnoster) -> Option<()> {
+        let source = if file_path.text.starts_with("std/") {
             match std::env::var("RET_STD_PATH") {
                 Ok(std_path) => self.load_source(
-                    loc,
-                    &(std_path + file_path.strip_prefix("std/").unwrap()),
+                    file_path.loc,
+                    &(std_path + file_path.text.strip_prefix("std/").unwrap()),
                     diag,
                 ),
-                Err(_) => self.load_source(loc, &file_path, diag),
+                Err(_) => self.load_source(file_path.loc, &file_path.text, diag),
             }
         } else {
-            self.load_source(loc, &file_path, diag)
+            self.load_source(file_path.loc, &file_path.text, diag)
         };
         if source.is_none() {
             return None;
         }
-        let mut lexer = Lexer::new(source?.chars().collect(), Some(file_path));
+        let mut lexer = Lexer::new(source?.chars().collect(), Some(file_path.text));
         while lexer.peek_token().kind != TokenKind::End {
             self.process_command(Command::parse(&mut lexer, diag)?, diag)?
         }
@@ -448,10 +443,10 @@ impl Context {
 
     pub fn process_command(&mut self, command: Command, diag: &mut impl Diagnoster) -> Option<()> {
         match command.clone() {
-            Command::Load(loc, file_path) => {
+            Command::Load(file_path) => {
                 let saved_interactive = self.interactive;
                 self.interactive = false;
-                self.process_file(loc, file_path, diag)?;
+                self.process_file(file_path, diag)?;
                 self.interactive = saved_interactive;
             }
             Command::DefineRule { name, rule } => {
@@ -738,12 +733,12 @@ impl Context {
                     return None;
                 }
             }
-            Command::Save(loc, file_path) => {
-                if let Err(err) = self.save_history(&file_path) {
+            Command::Save(file_path) => {
+                if let Err(err) = self.save_rules_to_file(&file_path.text) {
                     diag.report(
-                        &loc,
+                        &file_path.loc,
                         Severity::Error,
-                        &format!("could not save file {}: {}", file_path, err),
+                        &format!("could not save file {}: {}", file_path.text, err),
                     );
                     return None;
                 }
