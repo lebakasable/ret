@@ -45,11 +45,6 @@ pub enum Command {
     History {
         keyword: Token,
     },
-    Match {
-        keyword: Token,
-        name: Token,
-        reversed: bool,
-    },
 }
 
 impl Command {
@@ -104,21 +99,6 @@ impl Command {
                     diag.report(&actual_token.loc, Severity::Error, &format!("`delete` command expects {expected_kind} as an argument but got {actual_token} instead", actual_token = actual_token.report()));
                 }).ok()?;
                 Some(Command::DeleteRule(keyword.loc, name))
-            }
-            TokenKind::Match => {
-                let keyword = lexer.next_token();
-                let reversed = if lexer.peek_token().kind == TokenKind::Bang {
-                    lexer.next_token();
-                    true
-                } else {
-                    false
-                };
-                let name = lexer.expect_tokens(&[TokenKind::Ident], diag)?;
-                Some(Command::Match {
-                    keyword,
-                    name,
-                    reversed,
-                })
             }
             _ => {
                 let expr = Expr::parse(lexer, diag)?;
@@ -554,7 +534,21 @@ impl Context {
 
                     let previous_expr = frame.expr.clone();
                     match Strategy::by_name(&strategy_name.text) {
-                        Some(strategy) => rule.apply(&mut frame.expr, &strategy, &bar.loc, diag)?,
+                        Some(Strategy::Match) => {
+                            let head = rule.head();
+                            let subexprs = find_all_subexprs(&head, &frame.expr);
+                            for (i, subexpr) in subexprs.iter().enumerate() {
+                                println!(
+                                    " => {i}: {subexpr}",
+                                    subexpr = highlight_subexpr(&frame.expr, subexpr).unwrap()
+                                );
+                            }
+                        }
+                        Some(strategy) => {
+                            rule.apply(&mut frame.expr, &strategy, &bar.loc, diag)?;
+                            println!(" => {}", &frame.expr);
+                            frame.history.push((previous_expr, command));
+                        }
                         None => {
                             diag.report(
                                 &bar.loc,
@@ -567,8 +561,6 @@ impl Context {
                             return None;
                         }
                     };
-                    println!(" => {}", &frame.expr);
-                    frame.history.push((previous_expr, command));
                 } else {
                     diag.report(&bar.loc, Severity::Error, &format!("To apply a rule to an expression you need to first start shaping the expression, but no shaping is currently in place"));
                     diag.report(
@@ -761,51 +753,6 @@ impl Context {
                         &format!("could not save file {}: {}", file_path.text, err),
                     );
                     return None;
-                }
-            }
-            Command::Match {
-                keyword,
-                name,
-                reversed,
-            } => {
-                if let Some(ShapingFrame { expr, .. }) = self.shaping_stack.last() {
-                    if let Some(rule_def) =
-                        get_item_by_key(&self.rules, &name).map(|(_, value)| value)
-                    {
-                        let pattern = match &rule_def.rule {
-                            Rule::User { head, body } => {
-                                if reversed {
-                                    body.clone()
-                                } else {
-                                    head.clone()
-                                }
-                            }
-                            Rule::Replace => {
-                                if reversed {
-                                    diag.report(&name.loc, Severity::Error, "irreversible rule");
-                                    return None;
-                                } else {
-                                    Expr::replace_head()
-                                }
-                            }
-                        };
-                        let subexprs = find_all_subexprs(&pattern, expr);
-                        for (i, subexpr) in subexprs.iter().enumerate() {
-                            println!(
-                                " => {i}: {subexpr}",
-                                subexpr = highlight_subexpr(expr, subexpr).unwrap()
-                            );
-                        }
-                    } else {
-                        diag.report(
-                            &name.loc,
-                            Severity::Error,
-                            &format!("rule {name} does not exists", name = name.text),
-                        );
-                        return None;
-                    }
-                } else {
-                    diag.report(&keyword.loc, Severity::Error, "no shaping in place");
                 }
             }
         }

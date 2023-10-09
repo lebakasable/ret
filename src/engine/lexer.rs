@@ -38,7 +38,6 @@ pub enum TokenKind {
     List,
     Show,
     History,
-    Match,
 
     OpenParen,
     CloseParen,
@@ -74,7 +73,6 @@ fn keyword_by_name(text: &str) -> Option<TokenKind> {
         "list" => Some(TokenKind::List),
         "show" => Some(TokenKind::Show),
         "history" => Some(TokenKind::History),
-        "match" => Some(TokenKind::Match),
         _ => None,
     }
 }
@@ -93,7 +91,6 @@ impl fmt::Display for TokenKind {
             Delete => write!(f, "`delete`"),
             Load => write!(f, "`load`"),
             Save => write!(f, "`save`"),
-            Match => write!(f, "`match`"),
             OpenParen => write!(f, "open paren"),
             CloseParen => write!(f, "close paren"),
             OpenCurly => write!(f, "open curly"),
@@ -195,6 +192,7 @@ impl Lexer {
         }
     }
 
+    #[allow(dead_code)]
     pub fn expect_tokens(
         &mut self,
         expected: &[TokenKind],

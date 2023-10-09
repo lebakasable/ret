@@ -28,6 +28,7 @@ pub enum Strategy {
     All,
     Deep,
     Nth(usize),
+    Match,
 }
 
 impl Strategy {
@@ -36,6 +37,7 @@ impl Strategy {
             "all" => Some(Self::All),
             "first" => Some(Self::Nth(0)),
             "deep" => Some(Self::Deep),
+            "match" => Some(Self::Match),
             x => x.parse().map(Self::Nth).ok(),
         }
     }
@@ -71,11 +73,20 @@ impl Strategy {
                     }
                 }
             }
+
+            Self::Match => unreachable!(),
         }
     }
 }
 
 impl Rule {
+    pub fn head(&self) -> Expr {
+        match self {
+            Self::User { head, .. } => head.clone(),
+            Self::Replace => Expr::replace_head(),
+        }
+    }
+
     pub fn apply(
         &self,
         expr: &mut Expr,
