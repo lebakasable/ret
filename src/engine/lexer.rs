@@ -1,4 +1,6 @@
-use std::fmt;
+use std::fmt::{self, Write};
+
+use super::diagnostics::{Diagnoster, Severity};
 
 #[derive(Debug, Clone)]
 pub enum Loc {
@@ -36,6 +38,7 @@ pub enum TokenKind {
     List,
     Show,
     History,
+    Match,
 
     OpenParen,
     CloseParen,
@@ -71,6 +74,7 @@ fn keyword_by_name(text: &str) -> Option<TokenKind> {
         "list" => Some(TokenKind::List),
         "show" => Some(TokenKind::Show),
         "history" => Some(TokenKind::History),
+        "match" => Some(TokenKind::Match),
         _ => None,
     }
 }
@@ -89,6 +93,7 @@ impl fmt::Display for TokenKind {
             Delete => write!(f, "`delete`"),
             Load => write!(f, "`load`"),
             Save => write!(f, "`save`"),
+            Match => write!(f, "`match`"),
             OpenParen => write!(f, "open paren"),
             CloseParen => write!(f, "close paren"),
             OpenCurly => write!(f, "open curly"),
@@ -188,6 +193,38 @@ impl Lexer {
                 line: self.current_line(),
             },
         }
+    }
+
+    pub fn expect_tokens(
+        &mut self,
+        expected: &[TokenKind],
+        diag: &mut impl Diagnoster,
+    ) -> Option<Token> {
+        let token = self.next_token();
+        for kind in expected {
+            if *kind == token.kind {
+                return Some(token);
+            }
+        }
+        let mut expected_message = String::new();
+        for (i, kind) in expected.iter().enumerate() {
+            if i == 0 {
+                write!(expected_message, "{kind}").unwrap();
+            } else if i + i == expected.len() {
+                write!(expected_message, ", or {kind}").unwrap();
+            } else {
+                write!(expected_message, ", {kind}").unwrap();
+            }
+        }
+        diag.report(
+            &token.loc,
+            Severity::Error,
+            &format!(
+                "Expected {expected_message}, but got {actual}",
+                actual = token.kind
+            ),
+        );
+        None
     }
 
     pub fn expect_token(&mut self, kind: TokenKind) -> Result<Token, (TokenKind, Token)> {

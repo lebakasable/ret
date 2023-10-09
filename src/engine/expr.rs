@@ -6,6 +6,37 @@ use super::lexer::*;
 
 pub type Bindings = HashMap<String, Expr>;
 
+macro_rules! fun_args {
+    () => { vec![] };
+    ($name:ident) => { vec![expr!($name)] };
+    ($name:ident,$($rest:tt)*) => {
+        {
+            let mut t = vec![expr!($name)];
+            t.append(&mut fun_args!($($rest)*));
+            t
+        }
+    };
+    ($name:ident($($args:tt)*)) => {
+        vec![expr!($name($($args)*))]
+    };
+    ($name:ident($($args:tt)*),$($rest:tt)*) => {
+        {
+            let mut t = vec![expr!($name($($args)*))];
+            t.append(&mut fun_args!($($rest)*));
+            t
+        }
+    }
+}
+
+macro_rules! expr {
+    ($name:ident) => {
+        Expr::make_ident(stringify!($name), loc_here!())
+    };
+    ($name:ident($($args:tt)*)) => {
+        Expr::Fun(Box::new(Expr::make_ident(stringify!($name), loc_here!())), fun_args!($($args)*))
+    };
+}
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Op {
     Add,
@@ -67,6 +98,10 @@ pub enum Expr {
 }
 
 impl Expr {
+    pub fn replace_head() -> Expr {
+        expr!(apply_rule(Strategy, Head, Body, Expr))
+    }
+
     pub fn substitute(&mut self, bindings: &Bindings) {
         match self {
             Self::Sym(_) => {}
@@ -278,39 +313,6 @@ impl Expr {
     }
 }
 
-#[allow(unused_macros)]
-macro_rules! fun_args {
-    () => { vec![] };
-    ($name:ident) => { vec![expr!($name)] };
-    ($name:ident,$($rest:tt)*) => {
-        {
-            let mut t = vec![expr!($name)];
-            t.append(&mut fun_args!($($rest)*));
-            t
-        }
-    };
-    ($name:ident($($args:tt)*)) => {
-        vec![expr!($name($($args)*))]
-    };
-    ($name:ident($($args:tt)*),$($rest:tt)*) => {
-        {
-            let mut t = vec![expr!($name($($args)*))];
-            t.append(&mut fun_args!($($rest)*));
-            t
-        }
-    }
-}
-
-#[allow(unused_macros)]
-macro_rules! expr {
-    ($name:ident) => {
-        Expr::make_ident(stringify!($name), loc_here!())
-    };
-    ($name:ident($($args:tt)*)) => {
-        Expr::Fun(Box::new(Expr::make_ident(stringify!($name), loc_here!())), fun_args!($($args)*))
-    };
-}
-
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -360,7 +362,6 @@ impl fmt::Display for Expr {
     }
 }
 
-#[allow(dead_code)]
 pub fn find_all_subexprs<'a>(pattern: &'a Expr, expr: &'a Expr) -> Vec<&'a Expr> {
     let mut subexprs = Vec::new();
 
@@ -386,6 +387,60 @@ pub fn find_all_subexprs<'a>(pattern: &'a Expr, expr: &'a Expr) -> Vec<&'a Expr>
 
     find_all_subexprs_impl(pattern, expr, &mut subexprs);
     subexprs
+}
+
+pub fn highlight_subexpr(expr: &Expr, subexpr: &Expr) -> Result<String, std::fmt::Error> {
+    use std::fmt::Write;
+    let mut result = String::new();
+    if expr as *const Expr == subexpr as *const Expr {
+        write!(result, "\x1b[47m\x1b[30m{expr}\x1b[0m")?;
+    } else {
+        match expr {
+            Expr::Sym(name) | Expr::Var(name) => write!(result, "{}", name.text)?,
+            Expr::Fun(head, args) => {
+                match &**head {
+                    Expr::Sym(name) | Expr::Var(name) => write!(result, "{}", name.text)?,
+                    other => write!(result, "({})", highlight_subexpr(other, subexpr)?)?,
+                }
+                write!(result, "(")?;
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 {
+                        write!(result, ", ")?;
+                    }
+                    write!(result, "{}", highlight_subexpr(arg, subexpr)?)?;
+                }
+                write!(result, ")")?;
+            }
+            Expr::Op(op, lhs, rhs) => {
+                match **lhs {
+                    Expr::Op(sub_op, _, _) => {
+                        if sub_op.precedence() <= op.precedence() {
+                            write!(result, "({})", highlight_subexpr(lhs, subexpr)?)?
+                        } else {
+                            write!(result, "{}", highlight_subexpr(lhs, subexpr)?)?
+                        }
+                    }
+                    _ => write!(result, "{}", highlight_subexpr(lhs, subexpr)?)?,
+                }
+                if op.precedence() <= 1 {
+                    write!(result, " {} ", op)?;
+                } else {
+                    write!(result, "{}", op)?;
+                }
+                match **rhs {
+                    Expr::Op(sub_op, _, _) => {
+                        if sub_op.precedence() <= op.precedence() {
+                            write!(result, "({})", highlight_subexpr(rhs, subexpr)?)?;
+                        } else {
+                            write!(result, "{}", highlight_subexpr(rhs, subexpr)?)?;
+                        }
+                    }
+                    _ => write!(result, "{}", highlight_subexpr(rhs, subexpr)?)?,
+                }
+            }
+        }
+    }
+    Ok(result)
 }
 
 #[cfg(test)]

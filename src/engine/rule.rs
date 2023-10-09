@@ -158,9 +158,7 @@ impl Rule {
                 }
 
                 Rule::Replace => {
-                    if let Some(bindings) =
-                        expr!(apply_rule(Strategy, Head, Body, Expr)).pattern_match(expr)
-                    {
+                    if let Some(bindings) = Expr::replace_head().pattern_match(expr) {
                         *match_count += 1;
                         let meta_rule = Rule::User {
                             head: bindings
