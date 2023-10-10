@@ -170,7 +170,7 @@ impl Command {
                                     expr.human_name()
                                 ),
                             );
-                            return None;
+                            None
                         }
                     }
                     TokenKind::Equals => {
@@ -257,11 +257,7 @@ impl Command {
                                 }
                             }
                             _ => {
-                                diag.report(
-                                    &keyword.loc,
-                                    Severity::Error,
-                                    &format!("expected symbol"),
-                                );
+                                diag.report(&keyword.loc, Severity::Error, "expected symbol");
                                 None
                             }
                         }
@@ -349,8 +345,7 @@ where
 
 impl Context {
     pub fn new(interactive: bool) -> Self {
-        let mut rules = Vec::new();
-        rules.push((
+        let rules = vec![(
             Token {
                 kind: TokenKind::Ident,
                 text: "replace".to_string(),
@@ -360,7 +355,7 @@ impl Context {
                 rule: Rule::Replace,
                 history: vec![],
             },
-        ));
+        )];
         Self {
             interactive,
             rules,
@@ -376,7 +371,7 @@ impl Context {
             match rule {
                 Rule::User { head, body, .. } => {
                     write!(sink, "{name} :: {head}", name = name.text)?;
-                    if history.len() > 0 {
+                    if !history.is_empty() {
                         writeln!(sink, " {{")?;
                         for (_, command) in history {
                             match command {
@@ -445,9 +440,7 @@ impl Context {
         } else {
             self.load_source(file_path.loc, &file_path.text, diag)
         };
-        if source.is_none() {
-            return None;
-        }
+        source.as_ref()?;
         let mut lexer = Lexer::new(source?.chars().collect(), Some(file_path.text));
         while lexer.peek_token().kind != TokenKind::End {
             self.process_command(Command::parse(&mut lexer, diag)?, diag)?
@@ -473,7 +466,7 @@ impl Context {
                     diag.report(
                         &existing_name.loc,
                         Severity::Info,
-                        &format!("the original definition is located here"),
+                        "the original definition is located here",
                     );
                     return None;
                 }
@@ -577,11 +570,11 @@ impl Context {
                         };
                     }
                 } else {
-                    diag.report(&bar.loc, Severity::Error, &format!("To apply a rule to an expression you need to first start shaping the expression, but no shaping is currently in place"));
+                    diag.report(&bar.loc, Severity::Error, "To apply a rule to an expression you need to first start shaping the expression, but no shaping is currently in place");
                     diag.report(
                         &bar.loc,
                         Severity::Info,
-                        &format!("<expression> {{    - to start shaping"),
+                        "<expression> {{    - to start shaping",
                     );
                     return None;
                 }
@@ -599,7 +592,7 @@ impl Context {
                             diag.report(
                                 &existing_name.loc,
                                 Severity::Info,
-                                &format!("the original definition is located here"),
+                                "the original definition is located here",
                             );
                             return None;
                         }
@@ -692,7 +685,7 @@ impl Context {
                     },
                 )) => {
                     print!("{name} :: {head}", name = name.text);
-                    if history.len() > 0 {
+                    if !history.is_empty() {
                         println!(" {{");
                         for (_, command) in history {
                             match command {

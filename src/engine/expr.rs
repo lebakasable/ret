@@ -419,7 +419,7 @@ pub fn find_all_subexprs<'a>(pattern: &'a Expr, expr: &'a Expr) -> Vec<&'a Expr>
 pub fn highlight_subexpr(expr: &Expr, subexpr: &Expr) -> Result<String, std::fmt::Error> {
     use std::fmt::Write;
     let mut result = String::new();
-    if expr as *const Expr == subexpr as *const Expr {
+    if std::ptr::eq(expr, subexpr) {
         write!(result, "\x1b[47m\x1b[30m{expr}\x1b[0m")?;
     } else {
         match expr {

@@ -361,7 +361,7 @@ impl Lexer {
                             loc,
                         },
                         '/' => {
-                            if let Some(_) = self.drop_char_if(|x| x == '/') {
+                            if self.drop_char_if(|x| x == '/').is_some() {
                                 self.drop_line();
                                 continue 'again;
                             } else {

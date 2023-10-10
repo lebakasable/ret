@@ -209,7 +209,7 @@ impl Rule {
                                 }
                                 None => {
                                     diag.report(
-                                        &apply_command_loc,
+                                        apply_command_loc,
                                         Severity::Error,
                                         &format!(
                                             "unknown rule application strategy '{}'",
@@ -221,7 +221,7 @@ impl Rule {
                             }
                         } else {
                             diag.report(
-                                &apply_command_loc,
+                                apply_command_loc,
                                 Severity::Error,
                                 &format!(
                                     "strategy must be a symbol but got {} {}",
@@ -255,11 +255,7 @@ impl Rule {
             diag,
         )?;
         if match_count == 0 {
-            diag.report(
-                &apply_command_loc,
-                Severity::Error,
-                &format!("no match found"),
-            );
+            diag.report(apply_command_loc, Severity::Error, "no match found");
             return None;
         }
         Some(())
