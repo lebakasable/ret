@@ -38,6 +38,7 @@ pub enum TokenKind {
     List,
     Show,
     History,
+    Fit,
 
     OpenParen,
     CloseParen,
@@ -73,6 +74,7 @@ fn keyword_by_name(text: &str) -> Option<TokenKind> {
         "list" => Some(TokenKind::List),
         "show" => Some(TokenKind::Show),
         "history" => Some(TokenKind::History),
+        "fit" => Some(TokenKind::Fit),
         _ => None,
     }
 }
@@ -91,6 +93,7 @@ impl fmt::Display for TokenKind {
             Delete => write!(f, "`delete`"),
             Load => write!(f, "`load`"),
             Save => write!(f, "`save`"),
+            Fit => write!(f, "`fit`"),
             OpenParen => write!(f, "open paren"),
             CloseParen => write!(f, "close paren"),
             OpenCurly => write!(f, "open curly"),

@@ -362,6 +362,33 @@ impl fmt::Display for Expr {
     }
 }
 
+pub fn matches_at_least_one<'a>(pattern: &'a Expr, expr: &'a Expr) -> bool {
+    if pattern.pattern_match(expr).is_some() {
+        return true;
+    }
+
+    match expr {
+        Expr::Fun(head, args) => {
+            if matches_at_least_one(pattern, head) {
+                return true;
+            }
+            for arg in args {
+                if matches_at_least_one(pattern, arg) {
+                    return true;
+                }
+            }
+        }
+        Expr::Op(_, lhs, rhs) => {
+            if matches_at_least_one(pattern, lhs) || matches_at_least_one(pattern, rhs) {
+                return true;
+            }
+        }
+        Expr::Sym(_) | Expr::Var(_) => {}
+    }
+
+    false
+}
+
 pub fn find_all_subexprs<'a>(pattern: &'a Expr, expr: &'a Expr) -> Vec<&'a Expr> {
     let mut subexprs = Vec::new();
 

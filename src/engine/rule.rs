@@ -80,6 +80,16 @@ impl Strategy {
 }
 
 impl Rule {
+    pub fn reverse(&self) -> Option<Self> {
+        match self {
+            Self::User { head, body } => Some(Self::User {
+                head: body.clone(),
+                body: head.clone(),
+            }),
+            Self::Replace => None,
+        }
+    }
+
     pub fn head(&self) -> Expr {
         match self {
             Self::User { head, .. } => head.clone(),

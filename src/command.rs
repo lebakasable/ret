@@ -45,6 +45,10 @@ pub enum Command {
     History {
         keyword: Token,
     },
+    Fit {
+        keyword: Token,
+        reversed: bool,
+    },
 }
 
 impl Command {
@@ -65,6 +69,16 @@ impl Command {
                     diag.report(&actual_token.loc, Severity::Error, &format!("`save` command expects {expected_kind} as the file path, but got {actual_token} instead", actual_token = actual_token.report()));
                 }).ok()?;
                 Some(Self::Save(token))
+            }
+            TokenKind::Fit => {
+                let keyword = lexer.next_token();
+                let reversed = if lexer.peek_token().kind == TokenKind::Bang {
+                    lexer.next_token();
+                    true
+                } else {
+                    false
+                };
+                Some(Self::Fit { keyword, reversed })
             }
             TokenKind::CloseCurly => {
                 let token = lexer.next_token();
@@ -752,6 +766,26 @@ impl Context {
                         Severity::Error,
                         &format!("could not save file {}: {}", file_path.text, err),
                     );
+                    return None;
+                }
+            }
+            Command::Fit { keyword, reversed } => {
+                if let Some(frame) = self.shaping_stack.last() {
+                    for (name, RuleDefinition { rule, .. }) in self.rules.iter() {
+                        if reversed {
+                            if let Some(rule) = rule.reverse() {
+                                if matches_at_least_one(&rule.head(), &frame.expr) {
+                                    println!(" ! {name}", name = name.text);
+                                }
+                            }
+                        } else {
+                            if matches_at_least_one(&rule.head(), &frame.expr) {
+                                println!("   {name}", name = name.text);
+                            }
+                        }
+                    }
+                } else {
+                    diag.report(&keyword.loc, Severity::Error, "no shaping in place");
                     return None;
                 }
             }
