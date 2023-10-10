@@ -93,6 +93,13 @@ impl Rule {
         }
     }
 
+    pub fn body(&self) -> Option<Expr> {
+        match self {
+            Self::User { body, .. } => Some(body.clone()),
+            Self::Replace => None,
+        }
+    }
+
     pub fn apply(
         &self,
         expr: &mut Expr,
