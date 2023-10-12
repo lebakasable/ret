@@ -34,11 +34,18 @@ Exemple:
 ```c
 swap :: A + B = B + A
 
-(1 + (2 + 3)) { 	// Créé une nouvelle "shape"
-	swap |  0     	// Applique "swap" à la première sous-expression
-	swap |! all			// Applique la règle "swap" inversée à toutes les sous-expressions
+(1 + (2 + 3)) {   // Créé une nouvelle "shape"
+	swap |  0     // Applique "swap" à la première sous-expression
+	swap |! all   // Applique la règle "swap" inversée à toutes les sous-expressions
 }
 ```
+
+On peut également définir une règle **anonyme**:
+````c
+(1 + (2 + 3)) {
+    A + B = B + A | all   // Applique la règle sans lui assigner un nom
+}
+````
 
 ## REPL
 
@@ -59,7 +66,7 @@ ret> (1 + (2 + 3)) {
 1> swap |! match
 1> fit
 ...
-1> fit !   // Pareil que fit, mais affiche les règles inversées peuvent être appliquées	
+1> fit !   // Pareil que 'fit', mais affiche les règles inversées peuvent être appliquées	
 1> }
 ret>
 ```
@@ -76,20 +83,8 @@ load "./std/std.ret"   // Cette ligne charge la libraire standard
 (2 + 3) {              // Créé une nouvelle "shape"
   3      | 0           // Applique la règle "3" à la première expression
   2      | all         // Applique la règle "2" à toutes les expressions
-  1      | all
   sum    | all
   sum    | all
   sum_id | all
-}
-
-(4 - 3) {
-  4      | 0
-  3      | all
-  2      | all
-  1      | all
-  sub    | all
-  sub    | all
-  sub    | all
-  sub_id | all
 }
 ```
