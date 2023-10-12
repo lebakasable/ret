@@ -48,6 +48,8 @@ Le REPL ajoute les outils suivants:
 - La stratégie **match**: Affiche toutes les sous-expressions avec leur index pour matcher celles-ci
 - La commande **fit**: Affiche toutes les règles qui match une sous-expression de la shape actuelle.
 - La commande **show**: Affiche la règle ou l'expression donnée
+- La commande **load**: Charge un fichier source
+- La commande **save**: Enregistre les éléments du REPL dans un fichier
 
 Exemple:
 ```c
