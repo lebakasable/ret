@@ -33,7 +33,9 @@ pub enum Command {
     FinishShaping {
         token: Token,
     },
-    UndoRule(Loc),
+    UndoRule {
+        keyword: Token
+    },
     Quit,
     DeleteRule(Loc, Token),
     Load(Token),
@@ -86,7 +88,7 @@ impl Command {
             }
             TokenKind::Undo => {
                 let keyword = lexer.next_token();
-                Some(Command::UndoRule(keyword.loc))
+                Some(Command::UndoRule { keyword })
             }
             TokenKind::Quit => {
                 lexer.next_token();
@@ -614,17 +616,17 @@ impl Context {
                     return None;
                 }
             }
-            Command::UndoRule(loc) => {
+            Command::UndoRule { keyword } => {
                 if let Some(frame) = self.shaping_stack.last_mut() {
                     if let Some((previous_expr, _)) = frame.history.pop() {
                         println!(" => {}", &previous_expr);
                         frame.expr = previous_expr;
                     } else {
-                        diag.report(&loc, Severity::Error, "end of history");
+                        diag.report(&keyword.loc, Severity::Error, "end of history");
                         return None;
                     }
                 } else {
-                    diag.report(&loc, Severity::Error, "no shaping in place");
+                    diag.report(&keyword.loc, Severity::Error, "no shaping in place");
                     return None;
                 }
             }
