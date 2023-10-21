@@ -41,8 +41,12 @@ pub enum Command {
         keyword: Token,
         name: Token,
     },
-    Load(Token),
-    Save(Token),
+    Load {
+        file_path: Token,
+    },
+    Save {
+        file_path: Token,
+    },
     List,
     Show {
         name: Token,
@@ -63,17 +67,17 @@ impl Command {
         match keyword_kind {
             TokenKind::Load => {
                 lexer.next_token();
-                let token = lexer.expect_token(TokenKind::Str).map_err(|(expected_kind, actual_token)| {
+                let file_path = lexer.expect_token(TokenKind::Str).map_err(|(expected_kind, actual_token)| {
                     diag.report(&actual_token.loc, Severity::Error, &format!("`load` command expects {expected_kind} as the file path, but got {actual_token} instead", actual_token = actual_token.report()));
                 }).ok()?;
-                Some(Self::Load(token))
+                Some(Self::Load { file_path })
             }
             TokenKind::Save => {
                 lexer.next_token();
-                let token = lexer.expect_token(TokenKind::Str).map_err(|(expected_kind, actual_token)| {
+                let file_path = lexer.expect_token(TokenKind::Str).map_err(|(expected_kind, actual_token)| {
                     diag.report(&actual_token.loc, Severity::Error, &format!("`save` command expects {expected_kind} as the file path, but got {actual_token} instead", actual_token = actual_token.report()));
                 }).ok()?;
-                Some(Self::Save(token))
+                Some(Self::Save { file_path })
             }
             TokenKind::Fit => {
                 let keyword = lexer.next_token();
@@ -455,7 +459,7 @@ impl Context {
 
     pub fn process_command(&mut self, command: Command, diag: &mut impl Diagnoster) -> Option<()> {
         match command.clone() {
-            Command::Load(file_path) => {
+            Command::Load { file_path } => {
                 let saved_interactive = self.interactive;
                 self.interactive = false;
                 self.process_file(file_path, diag)?;
@@ -758,7 +762,7 @@ impl Context {
                     return None;
                 }
             }
-            Command::Save(file_path) => {
+            Command::Save { file_path } => {
                 if let Err(err) = self.save_rules_to_file(&file_path.text) {
                     diag.report(
                         &file_path.loc,
