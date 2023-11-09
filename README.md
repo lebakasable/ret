@@ -1,4 +1,8 @@
+<div align="center">
+    <img src="assets/logo.svg" width="200" />
+
 # ret
+</div>
 
 Just an Expression Transformer written in Rust.
 
